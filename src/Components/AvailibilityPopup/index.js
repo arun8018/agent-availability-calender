@@ -1,4 +1,4 @@
-import React,{useState} from "react";
+import React, { useState } from "react";
 import { withStyles } from "@material-ui/core/styles";
 import Button from "@material-ui/core/Button";
 import Dialog from "@material-ui/core/Dialog";
@@ -18,7 +18,7 @@ import AddCircleOutlineRoundedIcon from "@material-ui/icons/AddCircleOutlineRoun
 import SaveOutlinedIcon from "@material-ui/icons/SaveOutlined";
 import TimePicker from "../BasicTimePicker";
 import Grid from "@material-ui/core/Grid";
-// import moment from 'moment' 
+// import moment from 'moment'
 const styles = (theme) => ({
   root: {
     margin: 0,
@@ -64,43 +64,42 @@ const DialogActions = withStyles((theme) => ({
 }))(MuiDialogActions);
 
 export default function CustomizedDialogs(props) {
-
   const [newFromTime, setNewFromTime] = useState(new Date());
   const [newToTime, setNewToTime] = useState(new Date());
   const [selectedFromTime, setSelectedNewFromTime] = useState(new Date());
   const [selectedToTime, setSelectedNewToTime] = useState(new Date());
-  const [newTime, setNewTime] = useState([])
-  const [id,setId]=useState("")
+  const [newTime, setNewTime] = useState([]);
+  const [id, setId] = useState("");
 
   const handleTimeChange = (name, value) => {
-    if (name === "fromTime")setNewFromTime(value)
-    if(name==="toTime")setNewToTime(value)
-  }
+    if (name === "fromTime") setNewFromTime(value);
+    if (name === "toTime") setNewToTime(value);
+  };
 
   const handleAddButton = () => {
     const addedTime = {
       // fromTime: moment(newFromTime).format("HH:mm"),
       // toTime: moment(newToTime).format("HH:mm"),
-      fromTime:newFromTime,
+      fromTime: newFromTime,
       toTime: newToTime,
     };
     setNewTime([...newTime, addedTime]);
   };
 
-    const handleSelectedTimeChange = (name, value) => {
-      if (name === "fromTime") setSelectedNewFromTime(value);
-      if (name === "toTime") setSelectedNewToTime(value);
-    };
-  
+  const handleSelectedTimeChange = (name, value) => {
+    if (name === "fromTime") setSelectedNewFromTime(value);
+    if (name === "toTime") setSelectedNewToTime(value);
+  };
+
   const handleEditClick = (id) => {
-    console.log({ id })
-    setId(id)
-  }
+    console.log({ id });
+    setId(id);
+  };
   const handleSaveClick = (id) => {
     setId("");
   };
 
-console.log({ newTime });
+  console.log({ newTime });
   return (
     <div>
       <Dialog
