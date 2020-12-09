@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { withStyles } from "@material-ui/core/styles";
 import Button from "@material-ui/core/Button";
 import Dialog from "@material-ui/core/Dialog";
@@ -18,7 +18,11 @@ import AddCircleOutlineRoundedIcon from "@material-ui/icons/AddCircleOutlineRoun
 import SaveOutlinedIcon from "@material-ui/icons/SaveOutlined";
 import TimePicker from "../BasicTimePicker";
 import Grid from "@material-ui/core/Grid";
-// import moment from 'moment'
+import moment from 'moment'
+import CircularProgress from "@material-ui/core/CircularProgress";
+import { withNewTimeValidator } from "../../Utils";
+import { withAvailableTimeValidator } from "../../Utils";
+
 const styles = (theme) => ({
   root: {
     margin: 0,
@@ -66,10 +70,27 @@ const DialogActions = withStyles((theme) => ({
 export default function CustomizedDialogs(props) {
   const [newFromTime, setNewFromTime] = useState(new Date());
   const [newToTime, setNewToTime] = useState(new Date());
-  const [selectedFromTime, setSelectedNewFromTime] = useState(new Date());
-  const [selectedToTime, setSelectedNewToTime] = useState(new Date());
-  const [newTime, setNewTime] = useState([]);
   const [id, setId] = useState("");
+  const [availabilityHours, setAvailabilityHours] = useState([]);
+  const [errorMessage,setErrorMessage]=useState(true)
+  const [errorMessage_s, setErrorMessage_s] = useState(true);
+  
+  useEffect(() => {
+    let newArr=[]
+    let arr = props.availabilityHours && props.availabilityHours
+    for (let i = 0; i < arr.length; i++){
+      let data = {
+        agent: arr[i].agent,
+        availableFrom: arr[i].availableFrom.substring(0,19),
+        availableTo: arr[i].availableTo.substring(0,19),
+        disabled: arr[i].disabled,
+        id: arr[i].id
+      }
+      newArr.push(data)
+    }
+    setAvailabilityHours(newArr)
+
+  }, [props.availabilityHours]);
 
   const handleTimeChange = (name, value) => {
     if (name === "fromTime") setNewFromTime(value);
@@ -78,28 +99,54 @@ export default function CustomizedDialogs(props) {
 
   const handleAddButton = () => {
     const addedTime = {
-      // fromTime: moment(newFromTime).format("HH:mm"),
-      // toTime: moment(newToTime).format("HH:mm"),
-      fromTime: newFromTime,
-      toTime: newToTime,
+      from: moment(newFromTime).format("HH:mm"),
+      to: moment(newToTime).format("HH:mm"),
     };
-    setNewTime([...newTime, addedTime]);
+    setErrorMessage(
+      withAvailableTimeValidator(
+        addedTime,
+        availabilityHours,
+        moment(props.calendarInfo).format("YYYY-MM-DD")
+      ))
+        
+        setErrorMessage_s(
+          withNewTimeValidator(
+            addedTime,
+            moment(props.calendarInfo).format("YYYY-MM-DD")
+          )
+        );
+    props.handleAddButton(addedTime);
   };
 
-  const handleSelectedTimeChange = (name, value) => {
-    if (name === "fromTime") setSelectedNewFromTime(value);
-    if (name === "toTime") setSelectedNewToTime(value);
+  const handleDeleteButton = (id) => {
+    props.handleDeleteButton(id);
+  }
+
+  const handleSelectedTimeChange = (index, item, name, value) => {
+    item[name] = value;
+    let arr = [...availabilityHours]
+    arr[index]=item
+    setAvailabilityHours(arr)
   };
 
   const handleEditClick = (id) => {
-    console.log({ id });
     setId(id);
   };
   const handleSaveClick = (id) => {
     setId("");
+    let data=availabilityHours.find((item) => {
+      return item.id===id
+    })
+    let updatedData = {
+      date: moment(props.calendarInfo).format("YYYY-MM-DD"),
+      availability_time: {
+        from: moment(data.availableFrom).format("HH:mm"),
+        to: moment(data.availableTo).format("HH:mm"),
+      },
+    };
+    props.handleSaveClick(id,updatedData)
   };
 
-  console.log({ newTime });
   return (
     <div>
       <Dialog
@@ -109,7 +156,7 @@ export default function CustomizedDialogs(props) {
         open={props.open}
       >
         <DialogTitle id="customized-dialog-title">
-          Hours For {props.calendarInfo}
+          Hours For {moment(props.calendarInfo).format("LL")}
         </DialogTitle>
         <DialogContent dividers>
           <>
@@ -117,11 +164,18 @@ export default function CustomizedDialogs(props) {
             <Divider />
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                {newTime.length > 0 ? (
-                  newTime.map((item, index) => {
+                {props.isLoading ?
+                  <Grid
+                    container
+                    justify="center"
+                    alignItems="center"
+                    spacing={2}
+                  ><CircularProgress />
+                  </Grid> : availabilityHours.length > 0 ? (
+                  availabilityHours.map((item, index) => {
                     return (
                       <Grid
-                        key={index}
+                        key={item.id}
                         container
                         justify="flex-start"
                         alignItems="center"
@@ -135,11 +189,17 @@ export default function CustomizedDialogs(props) {
                         <Grid item>From Time :</Grid>
                         <Grid item>
                           <TimePicker
-                            name="start Date"
-                            format="MM/dd/yyyy"
-                            value={item.fromTime}
-                            disabled={id !== index ? true : false}
-                            onChange={handleSelectedTimeChange}
+                            name="availableFrom"
+                            value={item.availableFrom}
+                            disabled={item.id !== id ? true : false}
+                            onChange={(name, value) => {
+                              handleSelectedTimeChange(
+                                index,
+                                item,
+                                name,
+                                value
+                              );
+                            }}
                           />
                         </Grid>
                         <Grid item>
@@ -150,11 +210,17 @@ export default function CustomizedDialogs(props) {
                         <Grid item>To Time :</Grid>
                         <Grid item>
                           <TimePicker
-                            name="start Date"
-                            format="MM/dd/yyyy"
-                            value={item.toTime}
-                            disabled={id !== index ? true : false}
-                            onHandleDateChange={handleSelectedTimeChange}
+                            name="availableTo"
+                            value={item.availableTo}
+                            disabled={item.id !== id ? true : false}
+                            onChange={(name, value) => {
+                              handleSelectedTimeChange(
+                                index,
+                                item,
+                                name,
+                                value
+                              );
+                            }}
                           />
                         </Grid>
                         <Grid item>
@@ -165,10 +231,10 @@ export default function CustomizedDialogs(props) {
                             spacing={0}
                           >
                             <Grid item>
-                              {id !== index ? (
+                              {item.id !== id ? (
                                 <div>
                                   <IconButton
-                                    onClick={() => handleEditClick(index)}
+                                    onClick={() => handleEditClick(item.id)}
                                   >
                                     <EditOutlinedIcon fontSize="small" />
                                   </IconButton>
@@ -177,7 +243,7 @@ export default function CustomizedDialogs(props) {
                               ) : (
                                 <div>
                                   <IconButton
-                                    onClick={() => handleSaveClick(index)}
+                                    onClick={() => handleSaveClick(id)}
                                   >
                                     <SaveOutlinedIcon fontSize="small" />
                                   </IconButton>
@@ -186,7 +252,14 @@ export default function CustomizedDialogs(props) {
                               )}
                             </Grid>
                             <Grid item>
-                              <IconButton>
+                              <IconButton
+                                onClick={() =>
+                                  handleDeleteButton(
+                                    item.id,
+                                    props.calendarInfo
+                                  )
+                                }
+                              >
                                 <DeleteOutlineRoundedIcon fontSize="small" />
                               </IconButton>
                               Delete
@@ -197,6 +270,7 @@ export default function CustomizedDialogs(props) {
                     );
                   })
                 ) : (
+
                   <Grid
                     container
                     justify="center"
@@ -286,6 +360,11 @@ export default function CustomizedDialogs(props) {
                 })}
               </Grid>
             </Grid>
+            {errorMessage && errorMessage_s ? null : (
+              <Typography variant="body2" color="secondary" align="left">
+                *Please select valid time intervals
+              </Typography>
+            )}
           </>
         </DialogContent>
         <DialogActions>
